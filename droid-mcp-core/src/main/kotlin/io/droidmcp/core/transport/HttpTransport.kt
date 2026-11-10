@@ -74,6 +74,8 @@ import java.util.concurrent.ConcurrentHashMap
  * @param serverVersion Version reported in `initialize` and the mDNS TXT record.
  * @param auditSink Optional per-call audit hook.
  * @param tls TLS material; when set the server binds HTTPS and exposes [tlsFingerprint].
+ * @param bindHost Address to listen on. `null` keeps Ktor's default (all interfaces); pass `"127.0.0.1"`
+ *   when only an app on the same device should reach the server.
  * @param allowedOrigins Exact `Origin` values (scheme://host[:port]) permitted to call the server.
  * @param resources Resource providers served by the `resources/...` methods.
  * @param prompts Prompts served by the `prompts/...` methods.
@@ -91,6 +93,7 @@ class HttpTransport(
     private val allowedOrigins: Set<String> = emptySet(),
     private val resources: ResourceRegistry = ResourceRegistry(),
     private val prompts: PromptRegistry = PromptRegistry(),
+    private val bindHost: String? = null,
 ) {
     init {
         require(bearerToken == null || bearerToken.length >= MIN_TOKEN_LENGTH) {
@@ -183,7 +186,10 @@ class HttpTransport(
             factory = Netty,
             configure = {
                 if (tlsConfig == null) {
-                    connector { port = this@HttpTransport.port }
+                    connector {
+                        port = this@HttpTransport.port
+                        this@HttpTransport.bindHost?.let { host = it }
+                    }
                 } else {
                     sslConnector(
                         keyStore = tlsConfig.keyStore,
@@ -192,6 +198,7 @@ class HttpTransport(
                         privateKeyPassword = { tlsConfig.privateKeyPassword },
                     ) {
                         port = tlsConfig.httpsPort
+                        this@HttpTransport.bindHost?.let { host = it }
                     }
                 }
             },

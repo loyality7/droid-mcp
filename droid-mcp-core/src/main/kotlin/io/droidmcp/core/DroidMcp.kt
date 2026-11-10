@@ -145,6 +145,7 @@ class DroidMcp private constructor(
         private val resourceProviders = mutableListOf<ResourceProvider>()
         private val promptList = mutableListOf<McpPrompt>()
         private var httpPort: Int? = null
+        private var bindHost: String? = null
         private var authToken: String? = null
         private var requireAuth: Boolean = true
         private var readOnly: Boolean = false
@@ -225,6 +226,7 @@ class DroidMcp private constructor(
          * @param readOnly Expose and accept only read-only tools (filters `tools/list`, rejects
          *   mutating `tools/call`).
          * @param context Android context, used for mDNS service broadcast when available.
+         * @param bindHost Address to listen on; `null` = all interfaces. Use `"127.0.0.1"` for an app-local server.
          * @param allowedOrigins Browser origins (e.g. `"http://localhost:6274"` for MCP Inspector)
          *   allowed to call the server. Requests carrying any other `Origin` header are rejected
          *   with 403 to block DNS-rebinding and drive-by browser requests; native clients send no
@@ -239,7 +241,9 @@ class DroidMcp private constructor(
             readOnly: Boolean = false,
             context: Context? = null,
             allowedOrigins: Set<String> = emptySet(),
+            bindHost: String? = null,
         ) = apply {
+            this.bindHost = bindHost
             require(token == null || token.length >= HttpTransport.MIN_TOKEN_LENGTH) {
                 "token must be at least ${HttpTransport.MIN_TOKEN_LENGTH} characters"
             }
@@ -271,6 +275,7 @@ class DroidMcp private constructor(
                     allowedOrigins = allowedOrigins,
                     resources = resources,
                     prompts = prompts,
+                    bindHost = bindHost,
                 )
             }
             return DroidMcp(registry, resources, prompts, http, inProcess)
